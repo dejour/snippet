@@ -1,13 +1,26 @@
 const ObjectComposer =
   (...importedMethodNames) =>
     (behaviour) =>
-      (...exportedMethodNames) =>
+      (...exportedMethodNames) => {
+        // support exported method renaming
+        const methodNameMap = exportedMethodNames.reduce((acc, name) => {
+            const splits = name.split(' as ');
+  
+            if (splits.length === 1) {
+            acc[name] = name;
+          } else if (splits.length == 2) {
+            acc[splits[0]] = splits[1]
+          }
+          return acc;
+        }, {});
         target => {
           const composedObject = Symbol('composedObject');
           const instance = Symbol('instance');
 
-          for (const methodName of exportedMethodNames) {
-            Object.defineProperty(target.prototype, methodName, {
+          for (const methodName of Object.keys(methodNameMap)) {
+            const targetName = methodNameMap[methodName];
+
+            Object.defineProperty(target.prototype, targetName, {
               value: function (...args) {
                 if (this[composedObject] == null) {
                   this[composedObject] = Object.assign({}, behaviour);
@@ -25,7 +38,7 @@ const ObjectComposer =
           }
           return target;
         };
-        
+      }  
 // usage        
 const Coloured = ObjectComposer('title')({
   // __Public Methods__
